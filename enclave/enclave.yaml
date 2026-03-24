@@ -1,0 +1,48 @@
+# Enclave configuration
+# Edit this file then run: enclave init
+
+name: my-app                     # App name (used in stack name, EIF name)
+version: 0.0.1                   # Build version (semver)
+region: us-east-1                # AWS region
+account: ""                      # AWS account ID (required)
+prefix: dev                      # Deployment prefix (stack = {prefix}Nitro{Name})
+instance_type: m6i.xlarge        # EC2 instance type
+nix_image: nixos/nix:2.24.9      # Docker image for reproducible builds
+
+# SDK coordinates for the enclave supervisor binary.
+# The supervisor handles attestation, secrets, PCR extension, and signing
+# middleware automatically. Your app is a plain HTTP server with zero SDK imports.
+sdk:
+  rev: "v0.0.54"
+  hash: "sha256-6JByKXhosIBi4UkFVh05zyVIiRTVkx1mPbFf3yCQ4T0="
+  vendor_hash: "sha256-pn7BpRe6csX8LnK5NEGXktC+RkoaKg/ZZpJ6SLcP1dE="
+
+app:
+  language: "nodejs"             # App language: go, nodejs, dotnet
+  source: nix                    # "nix" = fetch from GitHub via Nix
+
+  # GitHub coordinates for the app to run inside the enclave.
+  # Your app is a normal Node.js HTTP server that listens on ENCLAVE_APP_PORT (default 7074).
+  # Secrets are passed as environment variables. No SDK imports needed.
+  nix_owner: ""                  # GitHub owner (required)
+  nix_repo: ""                   # GitHub repo name (required)
+  nix_rev: ""                    # Git commit SHA (required)
+  nix_hash: ""                   # Nix source hash: nix-prefetch-url --unpack (required)
+  nix_vendor_hash: ""            # npm deps hash (required)
+  binary_name: ""                # Package name from package.json (defaults to 'name')
+
+  # Environment variables baked into the EIF.
+  # Template vars: {{region}}, {{prefix}}, {{version}}
+  env:
+    # MY_APP_DATA_DIR: /app/data
+    # MY_APP_REGION: "{{region}}"
+
+# Secrets managed by KMS inside the enclave.
+# Each secret is generated as 32 random bytes, encrypted with KMS,
+# stored in SSM, and decrypted at boot via attestation.
+# The decrypted value (hex-encoded) is set as the specified env var.
+secrets:
+  - name: signing_key
+    env_var: APP_SIGNING_KEY
+  # - name: api_token
+  #   env_var: APP_API_TOKEN
